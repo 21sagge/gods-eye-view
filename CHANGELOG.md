@@ -1,5 +1,7 @@
 # Changelog
 
+- Merge INGV's FDSN event webservice (Italy bbox, down to M1.5) into the Earthquakes layer alongside the existing global USGS feed (M2.5+), deduplicating events both networks report. Denser earthquake detail over Italy; unaffected elsewhere. Either network can fail alone without losing the other's data.
+
 - Let CLI tools, development launchers and the setup doctor use an explicit project directory while retaining their existing default paths.
 
 - Split application scene, controls, catalog, tools and HTML into reusable components; configure application request services and sources without changing global fetch. Preserve standalone markup and voice behavior. Explicit annotation navigation may resolve a distant named target.

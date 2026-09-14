@@ -67,6 +67,12 @@ export const DATA_CREDITS = [
     html: 'Earthquakes: Data courtesy of the U.S. Geological Survey',
   },
   {
+    key: 'ingv',
+    html:
+      'Earthquakes (denser Italy detail): Data courtesy of ' +
+      '<a href="https://www.ingv.it" target="_blank" rel="noopener">INGV — Istituto Nazionale di Geofisica e Vulcanologia</a>',
+  },
+  {
     key: 'overpass',
     html:
       'Road geometry (traffic): ' +
