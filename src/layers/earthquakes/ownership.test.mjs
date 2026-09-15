@@ -31,7 +31,7 @@ function harness(source) {
 }
 const row = {
   stableId: 'event-a',
-  usgsId: 'event-a',
+  eventId: 'event-a',
   lon: 30,
   lat: 20,
   depthKm: 3,

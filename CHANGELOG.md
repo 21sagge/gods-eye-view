@@ -1,5 +1,7 @@
 # Changelog
 
+- Merge INGV's FDSN event webservice (Italy bbox, down to M1.5) into the Earthquakes layer alongside the existing global USGS feed (M2.5+), deduplicating events both networks report. Denser earthquake detail over Italy; unaffected elsewhere. Either network can fail alone without losing the other's data.
+
 - Add an optional Nominatim geocoding adapter with configurable search/reverse endpoints, cancellation, bounded responses and retryable upstream errors. Extract portable response-reading and Overpass lexical helpers while retaining existing server exports.
 
 - Expose reference feed factories independently of standalone catalog construction; preserve source choices and asset attribution.

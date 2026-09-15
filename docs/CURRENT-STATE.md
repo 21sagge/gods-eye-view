@@ -171,9 +171,15 @@ card limits, fire identities, altitude placement and analyst records are retaine
 
 Earthquake rendering is exposed through `./layers/earthquakes`. The layer owns
 its entities and request lifecycle; the application supplies the overlay host
-and snapshot source. The standalone adapter keeps the existing USGS daily feed,
-M2.5+ filtering, static discs, magnitude labels and analyst records. Disabling or
-destroying the layer cancels pending work and ignores late results.
+and snapshot source. The standalone adapter defaults to `createCombinedEarthquakeSource`
+merging the existing USGS daily feed (global, M2.5+) with `createIngvEarthquakeSource`
+(INGV FDSN event webservice, bounded to an Italy bbox, down to M1.5) — denser
+detail over Italy than USGS alone reports there. `dedupeEarthquakeRows` collapses
+the same physical event reported by both networks (within ~2 minutes and ~40 km),
+keeping the first-listed source's row; the combined source tolerates either
+network failing alone and only surfaces an error when both do. Static discs,
+magnitude labels and analyst records are unchanged. Disabling or destroying the
+layer cancels pending work and ignores late results.
 
 ## Vessel components and sources
 
@@ -725,7 +731,7 @@ cancels pending work; a later reopening cannot inherit an old focus request.
 
 ## September 8, 2026
 
-Earthquake refreshes validate the complete feed and construct replacement entities before clearing the previous snapshot. Malformed rows and duplicate rendered IDs retain the last good entities, overlays, count and timestamp and report a malformed response; unknown magnitude is excluded from M2.5+ rendering.
+Earthquake refreshes validate the complete feed and construct replacement entities before clearing the previous snapshot. Malformed rows and duplicate rendered IDs retain the last good entities, overlays, count and timestamp and report a malformed response; unknown magnitude is excluded from rendering (M2.5+ for USGS, M1.5+ for INGV — see the earthquake layer description earlier in this document for the combined-source detail).
 
 Non-object or array-valued properties reject the response instead of being treated as an unknown magnitude.
 
@@ -2399,7 +2405,7 @@ its criteria cannot be silently ignored.
 | Military Flights 🎖️ | adsb.lol /v2/mil | `src/data/militaryFlights.js` | `/api/adsblol/mil` | 15s |
 | Live AIS Vessels 🚢 | AISStream websocket | `src/data/aisLiveVessels.js` | `/api/ais-live` | 60s (+800ms visibility pass) |
 | Mapped Installations ⌖ | OpenStreetMap mapped context; on-demand Google Maps Places supplement | `src/data/militaryInstallations.js` | `/api/military-installations`, `/api/google/text-search` | viewport-driven + user search; while unavailable, auto-retry 30 s → 240 s backoff |
-| Earthquakes | USGS | `src/data/earthquakes.js` | — | 60s |
+| Earthquakes | USGS (global, M2.5+) + INGV (Italy bbox, M1.5+), merged and deduplicated | `src/data/earthquakes.js` | — | 60s |
 | Satellites | CelesTrak | `src/data/satellites.js` | `/api/celestrak` | 120s |
 | Space Missions (30d) | Launch Library 2 + CelesTrak | `src/data/rocketLaunches.js` | `/api/launches` + `/api/celestrak/active` | 5 min |
 | Traffic | OSM Overpass (+ optional TomTom live flow) | `src/data/traffic.js` | `/api/overpass` + `/api/tomtom` | viewport-driven |

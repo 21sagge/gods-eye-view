@@ -10,9 +10,15 @@ import {
 } from './model.js';
 export * from './model.js';
 export { createUsgsEarthquakeSource } from './source.js';
+export { createIngvEarthquakeSource } from './ingvSource.js';
+export { createCombinedEarthquakeSource } from './combinedSource.js';
 
 /** Own one earthquake display and its refresh lifecycle. */
-export function createEarthquakesLayer({ source, overlayHost } = {}) {
+export function createEarthquakesLayer({
+  source,
+  overlayHost,
+  sourceLabel = 'USGS',
+} = {}) {
   if (typeof source?.getSnapshot !== 'function')
     throw new TypeError('Earthquakes require a snapshot source');
   if (!overlayHost) throw new TypeError('Earthquakes require an overlay host');
@@ -28,7 +34,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
     id: 'earthquakes',
     name: 'Earthquakes (24h)',
     icon: '🌋',
-    source: 'USGS',
+    source: sourceLabel,
     updateInterval: 60000,
 
     init(viewer) {
@@ -78,7 +84,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
 
         for (const {
           stableId,
-          usgsId,
+          eventId,
           lon,
           lat,
           depthKm,
@@ -112,8 +118,10 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
               },
               properties: {
-                // Analyst seam (additive): the USGS event id (e.g. "us7000abcd").
-                usgsId,
+                // Analyst seam (additive): the source's own raw event id,
+                // e.g. "us7000abcd" (USGS) or "47168452" (INGV) — unlike
+                // stableId, this is never prefixed.
+                eventId,
                 mag,
                 place,
                 time,
@@ -148,7 +156,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
         _count = count;
         _lastUpdate = Date.now();
         _lastError = null;
-        console.log(`[Data:Earthquakes] Updated: ${_count} events (M2.5+)`);
+        console.log(`[Data:Earthquakes] Updated: ${_count} events`);
         return true;
       } catch (e) {
         if (request.signal.aborted || _request !== request || !_enabled)
@@ -206,7 +214,7 @@ export function createEarthquakesLayer({ source, overlayHost } = {}) {
         result.push(
           mapAnalystRecord(
             {
-              id: p?.usgsId?.getValue(now) ?? null,
+              id: p?.eventId?.getValue(now) ?? null,
               mag: p?.mag?.getValue(now),
               place: p?.place?.getValue(now),
               time: p?.time?.getValue(now),
