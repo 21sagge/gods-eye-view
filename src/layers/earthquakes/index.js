@@ -118,8 +118,9 @@ export function createEarthquakesLayer({
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
               },
               properties: {
-                // Analyst seam (additive): the source event id, e.g.
-                // "us7000abcd" (USGS) or "ingv-47168452" (INGV).
+                // Analyst seam (additive): the source's own raw event id,
+                // e.g. "us7000abcd" (USGS) or "47168452" (INGV) — unlike
+                // stableId, this is never prefixed.
                 eventId,
                 mag,
                 place,

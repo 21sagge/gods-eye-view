@@ -15,33 +15,40 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
 }
 
+function isSameEvent(a, b) {
+  if (a.time == null || b.time == null) return false;
+  if (Math.abs(a.time - b.time) > DEDUPE_TIME_WINDOW_MS) return false;
+  return haversineKm(a.lat, a.lon, b.lat, b.lon) <= DEDUPE_DISTANCE_KM;
+}
+
 /**
- * Collapse the same physical event reported by more than one source. Rows
- * are compared in input order and the first-seen row is kept, so pass the
- * most-authoritative source's rows first.
+ * Collapse the same physical event reported by more than one source.
+ * `groups` is one row array per source (most-authoritative source first) —
+ * rows are compared only against rows from a DIFFERENT group, never against
+ * rows from their own group, so two distinct events from the same network
+ * that happen to land close in time and space are never merged into one.
+ * Within a match, the first-seen row (earliest group, then earliest row) is
+ * kept.
  */
-export function dedupeEarthquakeRows(rows) {
+export function dedupeEarthquakeRows(groups) {
   const kept = [];
-  for (const row of rows) {
-    const isDuplicate = kept.some((existing) => {
-      if (row.time == null || existing.time == null) return false;
-      if (Math.abs(row.time - existing.time) > DEDUPE_TIME_WINDOW_MS)
-        return false;
-      return (
-        haversineKm(row.lat, row.lon, existing.lat, existing.lon) <=
-        DEDUPE_DISTANCE_KM
+  groups.forEach((rows, groupIndex) => {
+    for (const row of rows) {
+      const isDuplicate = kept.some(
+        (entry) => entry.groupIndex !== groupIndex && isSameEvent(row, entry.row),
       );
-    });
-    if (!isDuplicate) kept.push(row);
-  }
-  return kept;
+      if (!isDuplicate) kept.push({ row, groupIndex });
+    }
+  });
+  return kept.map((entry) => entry.row);
 }
 
 /**
  * Merge several earthquake sources into one 24h snapshot. Tolerant of
- * partial failure: as long as at least one source resolves, its rows are
- * returned rather than discarding the whole update over an unrelated
- * source's outage. Only throws when every source fails.
+ * partial failure: as long as at least one source resolves — even to an
+ * empty snapshot — its rows are returned rather than discarding the whole
+ * update over an unrelated source's outage. Only throws when every source
+ * fails.
  */
 export function createCombinedEarthquakeSource({ sources } = {}) {
   if (!Array.isArray(sources) || sources.length === 0)
@@ -53,14 +60,19 @@ export function createCombinedEarthquakeSource({ sources } = {}) {
         sources.map((source) => source.getSnapshot({ signal })),
       );
       signal?.throwIfAborted();
-      const rows = [];
+      const groups = [];
       let firstError = null;
+      let anyFulfilled = false;
       for (const outcome of settled) {
-        if (outcome.status === 'fulfilled') rows.push(...outcome.value);
-        else firstError ??= outcome.reason;
+        if (outcome.status === 'fulfilled') {
+          anyFulfilled = true;
+          groups.push(outcome.value);
+        } else {
+          firstError ??= outcome.reason;
+        }
       }
-      if (rows.length === 0 && firstError) throw firstError;
-      return dedupeEarthquakeRows(rows);
+      if (!anyFulfilled) throw firstError;
+      return dedupeEarthquakeRows(groups);
     },
   };
 }

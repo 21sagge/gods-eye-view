@@ -51,7 +51,10 @@ export function createIngvEarthquakeSource({
       signal?.throwIfAborted();
       const rows = normalizeIngvEarthquakeSnapshot(payload);
       if (!rows) throw new Error('Malformed INGV response');
-      return rows;
+      // The floor is also sent as `minmagnitude`, but the endpoint isn't
+      // trusted to enforce it — a stray below-threshold row must not reach
+      // the display.
+      return rows.filter((row) => row.mag >= minMagnitude);
     },
   };
 }

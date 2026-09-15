@@ -34,6 +34,10 @@ const REAL_SHAPE_PAYLOAD = {
 test('requests a bounded 24h Italy window and surfaces normalized rows', async () => {
   let capturedUrl;
   const source = createIngvEarthquakeSource({
+    // 0 isolates this test to URL construction and field mapping — the
+    // fixture's M0.7 event is below the real default floor, filtering is
+    // covered separately below.
+    minMagnitude: 0,
     now: () => Date.UTC(2026, 8, 15, 0, 0, 0),
     fetchImpl: async (url) => {
       capturedUrl = new URL(url);
@@ -46,7 +50,7 @@ test('requests a bounded 24h Italy window and surfaces normalized rows', async (
   assert.equal(capturedUrl.searchParams.get('format'), 'geojson');
   assert.equal(capturedUrl.searchParams.get('starttime'), '2026-09-14T00:00:00.000Z');
   assert.equal(capturedUrl.searchParams.get('endtime'), '2026-09-15T00:00:00.000Z');
-  assert.equal(capturedUrl.searchParams.get('minmagnitude'), '1.5');
+  assert.equal(capturedUrl.searchParams.get('minmagnitude'), '0');
   assert.equal(capturedUrl.searchParams.get('minlatitude'), String(INGV_ITALY_BBOX.minLatitude));
   assert.equal(capturedUrl.searchParams.get('maxlongitude'), String(INGV_ITALY_BBOX.maxLongitude));
 
@@ -62,6 +66,17 @@ test('requests a bounded 24h Italy window and surfaces normalized rows', async (
       time: Date.UTC(2026, 8, 14, 21, 27, 49, 600),
     },
   ]);
+});
+
+test('a below-threshold row is filtered client-side even if the endpoint returns one', async () => {
+  const source = createIngvEarthquakeSource({
+    minMagnitude: 1.5,
+    fetchImpl: async () => ({ ok: true, json: async () => REAL_SHAPE_PAYLOAD }),
+  });
+  // REAL_SHAPE_PAYLOAD's earthquake is M0.7 — below the 1.5 floor the request
+  // asked for. The endpoint isn't trusted to honor `minmagnitude`, so the
+  // source must drop it itself rather than display it.
+  assert.deepEqual(await source.getSnapshot(), []);
 });
 
 test('a custom minMagnitude and bbox are forwarded to the request', async () => {
