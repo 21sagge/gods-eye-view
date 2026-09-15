@@ -6,12 +6,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { makeFixtureRoot } from './tooling/fixtureRoot.mjs';
 
 const run = promisify(execFile);
 const bashTest = process.platform === 'win32' ? test.skip : test;
 
 async function launch(overrides = {}, dotenv = '', omitCctv = false) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'gev-cctv-launch-'));
+  // Physical path: the launched process reports its cwd resolved, and macOS
+  // reaches the temp directory through a symlink.
+  const root = await makeFixtureRoot('gev-cctv-launch-');
   try {
     await fs.mkdir(path.join(root, 'scripts'));
     await fs.mkdir(path.join(root, 'bin'));
@@ -22,7 +25,10 @@ async function launch(overrides = {}, dotenv = '', omitCctv = false) {
     }
     await fs.mkdir(path.join(root, 'src', 'standalone'), { recursive: true });
     const catalog = await fs.readFile(new URL('./standalone/catalog.js', import.meta.url), 'utf8');
-    await fs.writeFile(path.join(root, 'src', 'standalone', 'catalog.js'), omitCctv ? catalog.replace(/^\s*cctvLayer,\s*$/m, '') : catalog);
+    await fs.writeFile(path.join(root, 'src', 'standalone', 'catalog.js'), catalog);
+    await fs.mkdir(path.join(root, 'src', 'app'), { recursive: true });
+    const assembly = await fs.readFile(new URL('./app/constructCatalog.js', import.meta.url), 'utf8');
+    await fs.writeFile(path.join(root, 'src', 'app', 'constructCatalog.js'), omitCctv ? assembly.replace(/^\s*createApplicationCctv\(.*$/m, '') : assembly);
     await fs.mkdir(path.join(root, 'node_modules'));
     await fs.symlink(fileURLToPath(new URL('.', import.meta.resolve('vite/package.json'))), path.join(root, 'node_modules', 'vite'), 'dir');
     await fs.writeFile(path.join(root, '.env'), dotenv);

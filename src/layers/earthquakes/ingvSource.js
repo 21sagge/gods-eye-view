@@ -1,4 +1,4 @@
-import { normalizeIngvEarthquakeSnapshot } from './model.js';
+import { normalizeIngvEarthquakeSnapshot } from './records.js';
 
 const API_URL = 'https://webservices.ingv.it/fdsnws/event/1/query';
 

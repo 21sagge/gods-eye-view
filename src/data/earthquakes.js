@@ -1,14 +1,9 @@
 import {
-  createEarthquakesLayer as createLayer,
   createUsgsEarthquakeSource,
   createIngvEarthquakeSource,
   createCombinedEarthquakeSource,
 } from '../layers/earthquakes/index.js';
-import {
-  clearOverlaySource,
-  setOverlayEntries,
-  setOverlaySourceVisible,
-} from '../overlays/worldOverlay.js';
+import { createApplicationEarthquakes } from '../app/layers/earthquakes.js';
 export * from '../layers/earthquakes/index.js';
 /**
  * Wire the standalone source and application overlay owner. Defaults to
@@ -20,12 +15,8 @@ export function createEarthquakesLayer({
     sources: [createUsgsEarthquakeSource(), createIngvEarthquakeSource()],
   }),
   sourceLabel = 'USGS + INGV',
-  overlayHost = {
-    setEntries: setOverlayEntries,
-    setVisible: setOverlaySourceVisible,
-    clearSource: clearOverlaySource,
-  },
+  ...options
 } = {}) {
-  return createLayer({ source, overlayHost, sourceLabel });
+  return createApplicationEarthquakes({ source, sourceLabel, ...options });
 }
 export default createEarthquakesLayer();
